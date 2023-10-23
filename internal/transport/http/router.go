@@ -9,8 +9,13 @@ import (
 
 func InitRoutes(h *handlers.Handler) *mux.Router {
 	r := mux.NewRouter()
-	r.HandleFunc("/health", h.Health).Methods(http.MethodGet)
-	r.HandleFunc("/hello", h.Hello).Methods(http.MethodGet)
+
+	r.HandleFunc("/", h.Home).Methods(http.MethodGet)
+	r.HandleFunc("/auth", h.Auth).Methods(http.MethodGet)
+	r.HandleFunc("/callback", h.Callback).Methods(http.MethodGet)
+	r.HandleFunc("/me", h.Me).Methods(http.MethodGet)
+	r.HandleFunc("/logout", h.Logout).Methods(http.MethodGet)
+	r.HandleFunc("/users-list", h.GetUsersList).Methods(http.MethodGet)
 
 	return r
 }
