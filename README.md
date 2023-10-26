@@ -41,9 +41,9 @@ Host: localhost
 
 - Скопировать полученный файл .env по пути Golang-Task-1/internal/config
 
-- Запустить веб-приложение по пути Golang-Task-1/cmd командой
+- Запустить веб-приложение командой
 ```
-go run main.go
+go run cmd/main.go
 ```
 
 <h1 align="center">Тестирование</h1>

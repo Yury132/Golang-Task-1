@@ -37,7 +37,7 @@ var (
 // Стартовая страница
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
-	tmpl, err := template.ParseFiles("../internal/templates/home_page.html")
+	tmpl, err := template.ParseFiles("./internal/templates/home_page.html")
 	if err != nil {
 		h.log.Error().Err(err).Msg("filed to show home page")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -96,7 +96,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles("../internal/templates/auth_page.html")
+	tmpl, err := template.ParseFiles("./internal/templates/auth_page.html")
 	if err != nil {
 		h.log.Error().Err(err).Msg("filed to show home page")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -119,7 +119,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, что пользователь залогинен
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
 		// Если нет
-		tmpl, err := template.ParseFiles("../internal/templates/error.html")
+		tmpl, err := template.ParseFiles("./internal/templates/error.html")
 		w.WriteHeader(http.StatusUnauthorized)
 		if err != nil {
 			h.log.Error().Err(err).Msg("filed to show error page")
@@ -133,7 +133,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		info.Name = session.Values["Name"].(string)
 		info.Email = session.Values["Email"].(string)
 
-		tmpl, err := template.ParseFiles("../internal/templates/auth_page.html")
+		tmpl, err := template.ParseFiles("./internal/templates/auth_page.html")
 		if err != nil {
 			h.log.Error().Err(err).Msg("filed to show home page")
 			w.WriteHeader(http.StatusInternalServerError)

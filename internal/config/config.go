@@ -20,7 +20,7 @@ import (
 const (
 	formatJSON  = "json"
 	redirectURL = "http://localhost:8080/callback"
-	envFile     = "../internal/config/.env"
+	envFile     = "./internal/config/.env"
 )
 
 type Config struct {

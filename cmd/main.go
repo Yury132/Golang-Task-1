@@ -21,7 +21,7 @@ const (
 	dialect        = "pgx"
 	commandUp      = "up"
 	commandDown    = "down"
-	migrationsPath = "../internal/migrations"
+	migrationsPath = "./internal/migrations"
 )
 
 func main() {
