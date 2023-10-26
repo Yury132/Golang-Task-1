@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/pkgerrors"
 )
@@ -20,6 +20,7 @@ import (
 const (
 	formatJSON  = "json"
 	redirectURL = "http://localhost:8080/callback"
+	envFile     = "../internal/config/.env"
 )
 
 type Config struct {
@@ -52,16 +53,16 @@ type Config struct {
 func Parse() (*Config, error) {
 	var cfg = &Config{}
 
-	//мое--------------------------------------------
-	err2 := godotenv.Load()
-	if err2 != nil {
-		log.Fatal("Error loading .env file")
+	// Загружаем в переменные окружения из .env
+	err := godotenv.Load(envFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading .env file")
 	}
 
-	err := envconfig.Process("", cfg)
-
+	// Загружаем в envconfig
+	err = envconfig.Process("", cfg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to process env vars")
 	}
 
 	return cfg, nil
@@ -81,11 +82,16 @@ func (cfg Config) Logger() (logger zerolog.Logger) {
 	return zerolog.New(out).Level(level).With().Caller().Timestamp().Logger()
 }
 
+// Получаем адрес в БД
+func (cfg Config) GetDBConnString() string {
+	return fmt.Sprintf(
+		"host=%s port=%d dbname=%s sslmode=disable user=%s password=%s",
+		cfg.DB.Address, cfg.DB.Port, cfg.DB.Name, cfg.DB.User, cfg.DB.Password,
+	)
+}
+
 func (cfg Config) PgPoolConfig() (*pgxpool.Config, error) {
-	poolCfg, err := pgxpool.ParseConfig(fmt.Sprintf(
-		"host=%s port=%d dbname=%s sslmode=disable user=%s password=%s pool_max_conns=%d",
-		cfg.DB.Address, cfg.DB.Port, cfg.DB.Name, cfg.DB.User, cfg.DB.Password, cfg.DB.MaxConn,
-	))
+	poolCfg, err := pgxpool.ParseConfig(fmt.Sprintf("%s pool_max_conns=%d", cfg.GetDBConnString(), cfg.DB.MaxConn))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +99,7 @@ func (cfg Config) PgPoolConfig() (*pgxpool.Config, error) {
 	return poolCfg, nil
 }
 
-// Для Google аутентификации
+// Для Гугл аутентификации
 func (cfg Config) SetupConfig() *oauth2.Config {
 	conf := &oauth2.Config{
 		RedirectURL:  redirectURL,

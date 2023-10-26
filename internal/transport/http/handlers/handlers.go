@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 
@@ -17,6 +16,7 @@ import (
 type Service interface {
 	GetUserInfo(state string, code string) ([]byte, error)
 	GetUsersList(ctx context.Context) ([]models.User, error)
+	HandleUser(ctx context.Context, name string, email string) error
 }
 
 type Handler struct {
@@ -30,28 +30,14 @@ var (
 	// Любая строка
 	oauthStateString = "pseudo-random"
 	info             models.Content
-	store            = sessions.NewCookieStore([]byte("super-secret-key"))
+	// Сессия
+	store = sessions.NewCookieStore([]byte("super-secret-key"))
 )
-
-func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	data := "{\"health\": \"ok\"}"
-
-	response, err := json.Marshal(data)
-	if err != nil {
-		h.log.Error().Err(err).Msg("filed to marshal response data")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(response)
-}
 
 // Стартовая страница
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
-	tmpl, err := template.ParseFiles("templates/home_page.html")
+	tmpl, err := template.ParseFiles("../internal/templates/home_page.html")
 	if err != nil {
 		h.log.Error().Err(err).Msg("filed to show home page")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -60,13 +46,13 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
-// Авторизация через Google
+// Авторизация через Гугл
 func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
 	url := h.oauthConfig.AuthCodeURL(oauthStateString)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// Google перенаправляет сюда, пользователь успешно авторизовался, создаем сессию
+// Гугл перенаправляет сюда, когда пользователь успешно авторизовался, создаем сессию
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Получаем данные из гугла
 	content, err := h.service.GetUserInfo(r.FormValue("state"), r.FormValue("code"))
@@ -83,14 +69,11 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(info.Name, " заполнили все данные")
-
-	//------------------------------------------------------------------------------------------------
-	// Здесь нужно обратиться к БД и узнать есть ли такой пользователь в системе
-	//
-	// Если нет, создать его в БД
-	//
-	// И сохранить в обоих случаях данные пользователя в сессию
+	if err = h.service.HandleUser(r.Context(), info.Name, info.Email); err != nil {
+		h.log.Error().Err(err).Msg("filed to handle user")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// Задаем жизнь сессии в секундах
 	// 10 мин
@@ -103,12 +86,17 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		h.log.Error().Err(err).Msg("session create failed")
 	}
 	// Устанавливаем значения в сессию
+	// Сохраняем данные пользователя
 	session.Values["authenticated"] = true
 	session.Values["Name"] = info.Name
 	session.Values["Email"] = info.Email
-	session.Save(r, w)
+	if err = session.Save(r, w); err != nil {
+		h.log.Error().Err(err).Msg("filed to save session")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	tmpl, err := template.ParseFiles("templates/auth_page.html")
+	tmpl, err := template.ParseFiles("../internal/templates/auth_page.html")
 	if err != nil {
 		h.log.Error().Err(err).Msg("filed to show home page")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -131,28 +119,26 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, что пользователь залогинен
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
 		// Если нет
+		tmpl, err := template.ParseFiles("../internal/templates/error.html")
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set("Content-Type", "application/json")
-		resp := make(map[string]string)
-		resp["сообщение"] = "Вы не авторизованы..."
-		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			h.log.Error().Err(err).Msg("Error happened in JSON marshal")
+			h.log.Error().Err(err).Msg("filed to show error page")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
-		w.Write(jsonResp)
+		tmpl.Execute(w, nil)
 	} else {
 		// Если да
 		// Читаем данные из сессии
 		info.Name = session.Values["Name"].(string)
 		info.Email = session.Values["Email"].(string)
 
-		tmpl, err := template.ParseFiles("templates/auth_page.html")
+		tmpl, err := template.ParseFiles("../internal/templates/auth_page.html")
 		if err != nil {
 			h.log.Error().Err(err).Msg("filed to show home page")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		fmt.Println(info.Name, " успешно авторизован")
 		tmpl.Execute(w, info)
 	}
 }
@@ -170,6 +156,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// Все пользователи в БД
 func (h *Handler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -197,5 +184,3 @@ func New(log zerolog.Logger, oauthConfig *oauth2.Config, service Service) *Handl
 		service:     service,
 	}
 }
-
-// content := { "id": "105118128147454782975", "email": "ivan.ivanov132132@gmail.com", "verified_email": true, "name": "YURIY USYNIN", "given_name": "YURIY", "family_name": "USYNIN", "picture": "https://lh3.googleusercontent.com/a/ACg8ocLJMKT2_vAvctEMY5iygMWj7CzaPLpRvujVH6-hYVJP=s96-c", "locale": "ru" }

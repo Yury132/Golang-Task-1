@@ -14,7 +14,7 @@ type Google struct {
 	logger zerolog.Logger
 }
 
-// Получаем данные о пользователи из Google
+// Получаем данные о пользователе из Google
 func (g *Google) GetUserInfo(token *oauth2.Token) ([]byte, error) {
 	const url = "https://www.googleapis.com/oauth2/v2/userinfo?access_token="
 

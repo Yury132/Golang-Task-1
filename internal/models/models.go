@@ -6,6 +6,7 @@ type User struct {
 	Email string `json:"email"`
 }
 
+// Данные от Гугла
 type Content struct {
 	ID            string `json:"id"`
 	Email         string `json:"email"`
