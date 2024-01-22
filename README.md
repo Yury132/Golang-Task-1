@@ -56,10 +56,17 @@ http://localhost:8080
 
 - Кнопка "Авторизация" - авторизация пользователя в системе через Google OAuth2.
 
+![alt text](https://github.com/Yury132/Golang-Task-1/blob/main/forREADME/1.PNG?raw=true)
+
   Для нового пользователя создается запись в БД.
 
   Также создается сессия.
+
+![alt text](https://github.com/Yury132/Golang-Task-1/blob/main/forREADME/2.PNG?raw=true)
+
 - Кнопка "Информация обо мне" - получение имени пользователя и адреса электронной почты.
+
+![alt text](https://github.com/Yury132/Golang-Task-1/blob/main/forREADME/3.PNG?raw=true)
 
   Если пользователь неавторизован - выдается сообщение об ошибке.
 - Кнопка "Выход из системы" - окончание сессии, переход на главную страницу.
@@ -68,3 +75,6 @@ http://localhost:8080
 ```
 http://localhost:8080/users-list
 ```
+
+![alt text](https://github.com/Yury132/Golang-Task-1/blob/main/forREADME/4.PNG?raw=true)
+
